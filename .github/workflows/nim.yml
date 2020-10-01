@@ -46,8 +46,14 @@ jobs:
         run: nimjson -h
 
   test_v1:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     needs: before
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macOS-latest
     steps:
       - uses: actions/checkout@v1
       - name: Cache nimble
