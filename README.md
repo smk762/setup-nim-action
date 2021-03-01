@@ -12,23 +12,47 @@ See [action.yml](action.yml)
 
 ```yaml
 steps:
-  - uses: actions/checkout@master
+  - uses: actions/checkout@v2
   - uses: jiro4989/setup-nim-action@v1
     with:
-      nim-version: '1.2.0'
+      nim-version: '1.4.0' # default is 'stable'
+  - run: nimble build -Y
+  - run: nimble test -Y
+```
+
+### Setup a latest patch version Nim
+
+Setup a latest patch version Nim when `nim-version` is `1.n.x` .
+
+```yaml
+steps:
+  - uses: actions/checkout@v2
+  - uses: jiro4989/setup-nim-action@v1
+    with:
+      nim-version: '1.2.x' # ex: 1.0.x, 1.2.x, 1.4.x ...
+  - run: nimble build -Y
+  - run: nimble test -Y
+```
+
+### Setup a latest minor version Nim
+
+Setup a latest minor version Nim when `nim-version` is `1.x` .
+
+```yaml
+steps:
+  - uses: actions/checkout@v2
+  - uses: jiro4989/setup-nim-action@v1
+    with:
+      nim-version: '1.x'
   - run: nimble build -Y
   - run: nimble test -Y
 ```
 
 ### Cache usage
 
-**Note:**  
-Please should not use `Cache nimble` on `windows-latest`.
-`setup-nim-action` may Failing to install on `windows-latest`.
-
 ```yaml
 steps:
-  - uses: actions/checkout@master
+  - uses: actions/checkout@v2
   - name: Cache nimble
     id: cache-nimble
     uses: actions/cache@v1
@@ -52,7 +76,7 @@ jobs:
         nim: [ '1.2.0', 'stable', 'devel' ]
     name: Nim ${{ matrix.nim }} sample
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v2
       - name: Setup nim
         uses: jiro4989/setup-nim-action@v1
         with:
@@ -63,13 +87,19 @@ jobs:
 ### `devel --latest` usage
 
 Use `date` cache-key for speed-up if you want to use `devel --latest`.
+See [cache documents](https://github.com/actions/cache) for more information and how to use the cache.
 
 ```yaml
 jobs:
   test_devel:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - nim-version: 'devel --latest'
+            cache-key: 'devel-latest'
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
 
       - name: Get Date
         id: get-date
@@ -81,7 +111,7 @@ jobs:
         uses: actions/cache@v1
         with:
           path: ~/.choosenim
-          key: ${{ runner.os }}-choosenim-devel-latest-${{ steps.get-date.outputs.date }}
+          key: ${{ runner.os }}-choosenim-${{ matrix.cache-key }}-${{ steps.get-date.outputs.date }}
       - name: Cache nimble
         id: cache-nimble
         uses: actions/cache@v1
@@ -90,7 +120,7 @@ jobs:
           key: ${{ runner.os }}-nimble-${{ hashFiles('*.nimble') }}
       - uses: jiro4989/setup-nim-action@v1
         with:
-          nim-version: "devel --latest"
+          nim-version: "${{ matrix.nim-version }}"
 
       - run: nimble build
 ```

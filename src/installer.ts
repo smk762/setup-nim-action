@@ -3,11 +3,12 @@ import * as fs from "fs";
 import * as process from "process";
 import * as path from "path";
 import * as proc from "child_process";
+import * as util from "./util";
 const request = require("request-promise");
 
-export async function getNim(version: string) {
+export async function getNim(version: string, noColor: boolean, yes: boolean) {
   setNimbleBinPath();
-  await installNim(version);
+  await installNim(version, noColor, yes);
 }
 
 function setNimbleBinPath() {
@@ -28,13 +29,19 @@ function setNimbleBinPath() {
   core.exportVariable("PATH", newPath);
 }
 
-async function installNim(version: string) {
+async function installNim(version: string, noColor: boolean, yes: boolean) {
   const body = await request({
     url: "https://nim-lang.org/choosenim/init.sh",
     method: "GET",
   });
   fs.writeFileSync("init.sh", body);
   process.env.CHOOSENIM_NO_ANALYTICS = "1";
+
+  // #38
+  if (util.isGlobPatchVersion(version) || util.isGlobMinorVersion(version)) {
+    core.info(`Fetch a latest versions with ${version}`);
+    version = await util.getLatestVersion(version);
+  }
 
   // #21
   if (process.platform === "win32") {
@@ -56,8 +63,14 @@ async function installNim(version: string) {
     }
     core.info(stdout);
 
+    // Build optional parameters of choosenim.
+    let opts: string[] = [];
+    if (noColor) opts.push("--noColor");
+    if (yes) opts.push("--yes");
+    const optsStr = opts.join(" ");
+
     proc.exec(
-      `choosenim ${version}`,
+      `choosenim ${version} ${optsStr}`,
       (err: any, stdout: string, stderr: string) => {
         if (err) {
           core.error(err);
